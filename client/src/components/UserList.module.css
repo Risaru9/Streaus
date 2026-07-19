@@ -1,0 +1,120 @@
+.container {
+  background-color: var(--surface);
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.header {
+  padding: 1rem;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-elevated);
+}
+
+.header h3 {
+  margin: 0;
+  font-size: 1rem;
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  overflow-y: auto;
+  max-height: 100%;
+}
+
+.userRow {
+  display: flex;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--border);
+  transition: background-color 0.2s;
+}
+
+.userRow:last-child {
+  border-bottom: none;
+}
+
+.userRow:hover {
+  background-color: var(--surface-elevated);
+}
+
+.avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-weight: 600;
+  font-size: 1rem;
+  margin-right: 1rem;
+  position: relative;
+}
+
+.onlineDot {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 10px;
+  height: 10px;
+  background-color: var(--success);
+  border-radius: 50%;
+  border: 2px solid var(--surface);
+}
+
+.userInfo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex: 1;
+}
+
+.userName {
+  color: var(--text-primary);
+  font-size: 0.95rem;
+}
+
+.isMe {
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  font-style: italic;
+}
+
+.hostBadge {
+  background-color: var(--accent-subtle);
+  color: var(--accent);
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 0.2rem 0.5rem;
+  border-radius: 12px;
+  text-transform: uppercase;
+}
+
+.makeHostBtn {
+  background-color: transparent;
+  color: var(--accent);
+  border: 1px solid var(--accent);
+  padding: 0.25rem 0.6rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  opacity: 0;
+}
+
+.userRow:hover .makeHostBtn {
+  opacity: 1;
+}
+
+.makeHostBtn:hover {
+  background-color: var(--accent);
+  color: #fff;
+}

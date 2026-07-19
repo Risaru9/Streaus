@@ -1,0 +1,133 @@
+.container {
+  background-color: var(--surface);
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.header {
+  padding: 1rem;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-elevated);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.header h3 {
+  margin: 0;
+  font-size: 1rem;
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.playNextBtn {
+  background-color: var(--accent);
+  color: white;
+  border: none;
+  padding: 0.25rem 0.75rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+.playNextBtn:hover {
+  background-color: var(--accent-hover);
+}
+
+.addForm {
+  padding: 1rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.form {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.input {
+  flex: 1;
+  padding: 0.5rem;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  background-color: var(--background);
+  color: var(--text-primary);
+  font-size: 0.85rem;
+}
+
+.addBtn {
+  background-color: var(--surface-elevated);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.addBtn:hover {
+  background-color: var(--border);
+}
+
+.list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.emptyState {
+  padding: 2rem 1rem;
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  font-style: italic;
+}
+
+.queueItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--border);
+  transition: background-color 0.2s;
+}
+.queueItem:hover {
+  background-color: var(--surface-elevated);
+}
+
+.itemInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  overflow: hidden;
+}
+
+.itemName {
+  color: var(--text-primary);
+  font-size: 0.9rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.itemAddedBy {
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+}
+
+.removeBtn {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 1.2rem;
+  cursor: pointer;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+}
+.removeBtn:hover {
+  background-color: rgba(248, 113, 113, 0.2);
+  color: var(--error);
+}
