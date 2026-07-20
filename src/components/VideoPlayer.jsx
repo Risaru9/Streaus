@@ -2,7 +2,30 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import styles from './VideoPlayer.module.css';
-import { supabase } from '@/lib/supabase';
+// Helper to automatically convert Google Drive & Dropbox links to direct streamable URLs
+const getDirectStreamUrl = (url) => {
+  if (!url) return '';
+  const cleanUrl = url.trim();
+
+  // 1. Google Drive Link Conversion
+  const gdRegex1 = /drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)/;
+  const gdRegex2 = /drive\.google\.com\/open\?id=([a-zA-Z0-9_-]+)/;
+  
+  const match1 = cleanUrl.match(gdRegex1);
+  const match2 = cleanUrl.match(gdRegex2);
+  const fileId = (match1 && match1[1]) || (match2 && match2[1]);
+  
+  if (fileId) {
+    return `https://docs.google.com/uc?export=download&id=${fileId}`;
+  }
+
+  // 2. Dropbox Link Conversion
+  if (cleanUrl.includes('dropbox.com') && cleanUrl.endsWith('?dl=0')) {
+    return cleanUrl.replace('?dl=0', '?raw=1');
+  }
+
+  return cleanUrl;
+};
 
 export default function VideoPlayer({ channel, roomId, isHost, initialPlaybackState }) {
   const [videoUrl, setVideoUrl] = useState('');
@@ -105,15 +128,16 @@ export default function VideoPlayer({ channel, roomId, isHost, initialPlaybackSt
     e.preventDefault();
     const url = e.target.elements.url.value;
     if (url) {
+      const convertedUrl = getDirectStreamUrl(url);
       if (isHost) {
-        setVideoUrl(url);
+        setVideoUrl(convertedUrl);
         setFileName(url);
         if (channel) {
-          channel.send({ type: 'broadcast', event: 'player:video-loaded', payload: { videoName: url, videoDuration: 0, videoUrl: url } });
+          channel.send({ type: 'broadcast', event: 'player:video-loaded', payload: { videoName: url, videoDuration: 0, videoUrl: convertedUrl } });
         }
       } else {
         if (channel) {
-          channel.send({ type: 'broadcast', event: 'player:request-change', payload: { fileName: url, url: url, requesterName: sessionStorage.getItem('userName') } });
+          channel.send({ type: 'broadcast', event: 'player:request-change', payload: { fileName: url, url: convertedUrl, requesterName: sessionStorage.getItem('userName') } });
         }
         showToast('Change request sent to Host.');
       }
