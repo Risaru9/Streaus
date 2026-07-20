@@ -43,8 +43,12 @@ export async function POST(request) {
       );
     }
 
-    // 3. Daftarkan user ke database
-    const { user, error } = await registerUser(fullName, email, password);
+    // 3. Dapatkan origin untuk redirect konfirmasi email
+    const origin = request.headers.get('origin') || new URL(request.url).origin;
+    const redirectTo = `${origin}/login`;
+
+    // 4. Daftarkan user ke database
+    const { user, error } = await registerUser(fullName, email, password, redirectTo);
 
     if (error) {
       return NextResponse.json({ error }, { status: 400 });

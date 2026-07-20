@@ -89,12 +89,13 @@ export async function loginUser(email, password) {
  * @param {string} password 
  * @returns {Promise<{user: object, error: string}>}
  */
-export async function registerUser(fullName, email, password) {
+export async function registerUser(fullName, email, password, redirectTo) {
   try {
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
+        emailRedirectTo: redirectTo,
         data: {
           full_name: fullName,
         },
