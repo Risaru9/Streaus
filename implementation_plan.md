@@ -1,60 +1,46 @@
-# Fitur Baru: Hapus Otomatis R2, Poles UI/UX, dan Login Google
+# Rencana Implementasi: Fitur Baru dari Referensi Stitch
 
-Rencana ini merangkum tiga fitur besar yang Anda minta untuk menyempurnakan aplikasi Streaus.
+Berdasarkan gambar desain dari direktori `D:\DW\stitch`, saya telah mengidentifikasi beberapa fitur besar dan perombakan UI yang sangat ambisius dan modern. Rencana ini akan membawa Streaus dari sekadar "alat *nobar*" menjadi **Platform *Watch Party* Premium sekelas Netflix/Teleparty**.
 
 ## User Review Required
 
 > [!IMPORTANT]  
-> **Konfigurasi Google Login di Supabase:** Untuk mengaktifkan Google Login, Anda *wajib* melakukan konfigurasi di Google Cloud Platform (GCP) dan Supabase Dashboard Anda. Saya akan memberikan panduan langkah demi langkahnya di akhir setelah rencana ini disetujui, karena ini membutuhkan tindakan manual dari Anda (membuat OAuth Client ID & Secret). Apakah Anda siap untuk melakukan konfigurasi manual ini?
+> **1. Sumber Data Video Discovery Library:** Di desain, terdapat katalog "Trending Movies" dengan poster film asli (Dune, Oppenheimer, dll). Apakah Anda ingin saya menggunakan **TMDB API** (The Movie Database) secara gratis untuk menarik data film asli ini? Jika ya, kita membutuhkan API Key TMDB nanti. Ataukah Anda hanya ingin data *dummy* (palsu) sementara?
+
+> [!IMPORTANT]  
+> **2. Pemutaran Film Asli:** Jika pengguna menekan "Start Party with this Video" pada film *Dune: Part Two*, dari mana sumber videonya berasal? Apakah Anda memiliki API penyedia film bajakan/gratisan, atau sekadar memutar *Trailer* dari YouTube saja?
 
 > [!WARNING]  
-> **Penghapusan Video Otomatis (R2):** Menghapus video saat *Host* keluar dari *room* mengandalkan *event* peramban (seperti mengklik tombol "Leave" atau menutup *tab*). Jika peramban ditutup secara paksa (crash) atau internet terputus mendadak, permintaan hapus mungkin tidak terkirim. Apakah pendekatan ini cukup baik, atau Anda ingin saya menambahkan sistem penjadwalan (Cron Job) harian untuk membersihkan video-video lawas?
+> **3. Bentuk Landing Page:** Sebelumnya Anda meminta desain **Tiket Bioskop**. Namun di gambar referensi, desainnya berubah menjadi **Kotak Neon (Glowing Borders)** berlatar belakang gulungan pita film. Apakah Anda ingin saya **membuang desain Tiket Bioskop** yang baru saya buat dan menggantinya persis seperti gambar `modern_watch_party_lobby`?
 
 ## Proposed Changes
 
 ---
 
-### 1. Auto-Delete Video di Cloudflare R2
-
-Kita akan membuat *endpoint* API baru untuk menghapus file dari R2, dan memicu *endpoint* tersebut saat *Host* mengganti video atau keluar dari *room*.
-
-#### [MODIFY] [route.js](file:///d:/Streaming_couple/src/app/api/upload/route.js)
-- Menambahkan metode `DELETE` yang menerima URL video.
-- Mengekstrak `Key` (nama file) dari URL dan menggunakan `DeleteObjectCommand` dari AWS SDK untuk menghapus file tersebut dari Cloudflare R2 secara permanen.
-
+### 1. Fitur *Floating Reactions* (Reaksi Mengambang)
+Terinspirasi dari Facebook Live / Instagram Live.
 #### [MODIFY] [VideoPlayer.jsx](file:///d:/Streaming_couple/src/components/VideoPlayer.jsx)
-- Menambahkan fungsi `deleteCurrentVideo()` yang memanggil API `DELETE /api/upload`.
-- Memicu fungsi ini setiap kali *Host* mengunggah video baru (untuk menghapus video lama yang tergantikan).
-- Memanfaatkan *event listener* `beforeunload` (saat tab ditutup/direfresh) dan `componentWillUnmount` untuk memicu penghapusan saat *Host* keluar dari *room*.
+- Menambahkan bilah reaksi di dalam kontrol video (👍, ❤️, 😂, 😮, 😢, 😡).
+- Mengirimkan *event* `player:reaction` melalui Supabase Realtime *broadcast*.
+- Membuat sistem partikel CSS untuk memunculkan emoji yang melayang ke atas dan menghilang perlahan di atas video saat ada anggota yang menekan reaksi.
 
----
+### 2. Pengepakan Ulang UI Video Player (Dashboard Desktop & Mobile)
+#### [MODIFY] [room/[id]/page.js](file:///d:/Streaming_couple/src/app/room/[id]/page.js) & [VideoPlayer.jsx](file:///d:/Streaming_couple/src/components/VideoPlayer.jsx)
+- Memindahkan tombol "Invite" dan "Viewer Count" langsung ke dalam video (bersama kontrol lainnya).
+- Mengubah warna-warna *chat* agar menggunakan skema teks kuning/abu-abu sesuai gambar referensi.
+- Membuat tata letak *mobile* di mana *chat* dan *video queue* bertumpuk (*stacked*) secara vertikal dan bisa di-*toggle*.
 
-### 2. Integrasi Login dengan Google (OAuth)
-
-Kita akan merombak halaman otentikasi agar mendukung masuk dengan satu klik menggunakan Google.
-
-#### [MODIFY] [login/page.js](file:///d:/Streaming_couple/src/app/login/page.js) & [register/page.js](file:///d:/Streaming_couple/src/app/register/page.js)
-- Menambahkan tombol "Sign in with Google" bergaya premium.
-- Mengimplementasikan `supabase.auth.signInWithOAuth({ provider: 'google' })`.
-
----
-
-### 3. Pemolesan UI/UX (Desain Premium)
-
-Kita akan mengubah tampilan aplikasi dari yang sekadar fungsional menjadi *Wow!* dengan menerapkan tren desain web modern: *Glassmorphism*, gradien dinamis, dan efek *hover* yang hidup.
-
-#### [MODIFY] [globals.css](file:///d:/Streaming_couple/src/app/globals.css) & [page.module.css](file:///d:/Streaming_couple/src/app/page.module.css)
-- Mengubah warna latar belakang menjadi gradien gelap (*Deep Space* atau *Midnight Purple*).
-- Memperbarui tipografi.
-
-#### [MODIFY] [VideoPlayer.module.css](file:///d:/Streaming_couple/src/components/VideoPlayer.module.css) & [Room.module.css](file:///d:/Streaming_couple/src/app/room/[id]/page.module.css)
-- Menambahkan efek *Glassmorphism* (latar belakang semi-transparan dengan *blur*) pada panel *Chat*, *Users*, dan *Queue*.
-- Mengubah warna tombol (*Change Video*, *Load Subtitle*, *Leave Room*) agar lebih interaktif dengan animasi mikro (membesar/menyala saat disorot).
-- Merapikan tata letak (*layout*) *Video Player* agar terlihat lebih sinematik (menghilangkan garis tepi kasar, menambahkan bayangan halus/ *glow*).
+### 3. Video Discovery Library (Halaman Baru)
+#### [NEW] [library/page.js](file:///d:/Streaming_couple/src/app/library/page.js)
+- Membuat halaman baru dengan struktur tiga bagian (seperti di desain): 
+  1. *Trending Movies* (Grid Poster Film)
+  2. *YouTube Search*
+  3. *Upload File (Drag & Drop)*
+- Saat film diklik, akan muncul tombol kuning "Start Party with this Video" di atas poster (efek *hover*).
 
 ## Verification Plan
 
 ### Manual Verification
-1. **Hapus Otomatis:** Mengunggah video, lalu kembali ke beranda. Memeriksa dasbor R2 Anda untuk memastikan file tersebut benar-benar lenyap.
-2. **UI/UX:** Meninjau antarmuka secara visual.
-3. **Google Login:** Mengklik tombol Google Login dan memastikan *popup* otentikasi Google muncul dengan benar (setelah Anda melakukan *setup* OAuth).
+- **Reaksi:** Menguji menekan emoji di satu jendela peramban, dan melihat emoji melayang secara waktu nyata (*real-time*) di jendela lain.
+- **Library:** Memastikan transisi *hover* poster film mulus dan berhasil membuat *room* baru.
+- **Responsivitas:** Mengecek tata letak *dashboard* di layar kecil (HP) untuk memastikan tidak ada elemen yang tumpang tindih.
