@@ -519,6 +519,15 @@ export default function VideoPlayer({ roomId, isHost, userName, channel }) {
       }
     };
 
+    channel.on('broadcast', { event: 'player:play' }, onRemotePlay);
+    channel.on('broadcast', { event: 'player:pause' }, onRemotePause);
+    channel.on('broadcast', { event: 'player:seek' }, onRemoteSeek);
+    channel.on('broadcast', { event: 'player:video-loaded' }, onVideoInfo);
+    channel.on('broadcast', { event: 'player:heartbeat' }, onRemoteHeartbeat);
+    channel.on('broadcast', { event: 'player:request-change' }, onRequestChange);
+    channel.on('broadcast', { event: 'player:change-rejected' }, onChangeRejected);
+    channel.on('broadcast', { event: 'player:request-sync' }, onSyncRequest);
+
     return () => {
       isActive = false;
     };
