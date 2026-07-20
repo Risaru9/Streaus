@@ -15,6 +15,7 @@ export default function RoomPage({ params }) {
   
   const [activeTab, setActiveTab] = useState('chat');
   const [userName, setUserName] = useState('');
+  const [userId, setUserId] = useState('');
   const [channel, setChannel] = useState(null);
   const [users, setUsers] = useState([]);
   const [chatHistory, setChatHistory] = useState([]);
@@ -23,10 +24,10 @@ export default function RoomPage({ params }) {
   const [isConnected, setIsConnected] = useState(false);
 
   // Keep latest state in a ref to avoid resetting the realtime subscription when state updates
-  const stateRef = useRef({ chatHistory, queue, hostId, userName });
+  const stateRef = useRef({ chatHistory, queue, hostId, userId });
   useEffect(() => {
-    stateRef.current = { chatHistory, queue, hostId, userName };
-  }, [chatHistory, queue, hostId, userName]);
+    stateRef.current = { chatHistory, queue, hostId, userId };
+  }, [chatHistory, queue, hostId, userId]);
 
   useEffect(() => {
     let name = sessionStorage.getItem('userName');
@@ -39,9 +40,16 @@ export default function RoomPage({ params }) {
     }
     setUserName(name);
 
+    let localUserId = sessionStorage.getItem('userId');
+    if (!localUserId) {
+      localUserId = `user-${Math.random().toString(36).substring(2, 10)}`;
+      sessionStorage.setItem('userId', localUserId);
+    }
+    setUserId(localUserId);
+
     const roomChannel = supabase.channel(`room:${roomId}`, {
       config: {
-        presence: { key: name },
+        presence: { key: localUserId },
         broadcast: { self: true, ack: false }
       }
     });
@@ -60,7 +68,7 @@ export default function RoomPage({ params }) {
             activeUsers.push(u);
             if (u.joinedAt < oldestTime) {
               oldestTime = u.joinedAt;
-              firstUser = u.userName;
+              firstUser = u.id; // USE ID INSTEAD OF USERNAME
             }
           }
         });
@@ -77,7 +85,7 @@ export default function RoomPage({ params }) {
       })
       .on('broadcast', { event: 'state:request' }, (payload) => {
         // Only the host responds to state sync requests to prevent conflicting states
-        const { chatHistory: latestChat, queue: latestQueue, hostId: latestHost, userName: latestUser } = stateRef.current;
+        const { chatHistory: latestChat, queue: latestQueue, hostId: latestHost, userId: latestUser } = stateRef.current;
         if (latestHost === latestUser) {
           roomChannel.send({
             type: 'broadcast',
@@ -91,7 +99,7 @@ export default function RoomPage({ params }) {
         }
       })
       .on('broadcast', { event: 'state:sync' }, (payload) => {
-        if (payload.payload.targetUser === name) {
+        if (payload.payload.targetUser === localUserId) {
           setChatHistory(payload.payload.chatHistory || []);
           setQueue(payload.payload.queue || []);
         }
@@ -100,11 +108,12 @@ export default function RoomPage({ params }) {
     roomChannel.subscribe(async (status) => {
       if (status === 'SUBSCRIBED') {
         setIsConnected(true);
+        setChannel(roomChannel);
         // Track presence: pass both name (for UserList) and userName (for Host tracking)
         await roomChannel.track({ 
           userName: name, 
           name: name,
-          id: name, 
+          id: localUserId, 
           joinedAt: Date.now() 
         });
         
@@ -112,14 +121,12 @@ export default function RoomPage({ params }) {
         roomChannel.send({
           type: 'broadcast',
           event: 'state:request',
-          payload: { from: name }
+          payload: { from: localUserId }
         });
       } else if (status === 'CLOSED' || status === 'CHANNEL_ERROR') {
         setIsConnected(false);
       }
     });
-
-    setChannel(roomChannel);
 
     return () => {
       supabase.removeChannel(roomChannel);
@@ -129,8 +136,8 @@ export default function RoomPage({ params }) {
   const copyRoomCode = () => navigator.clipboard.writeText(roomId);
   const handleLeaveRoom = () => router.push('/');
 
-  if (!userName || !channel) return null;
-  const isHost = hostId === userName;
+  if (!userName || !channel || !userId) return null;
+  const isHost = hostId === userId;
 
   return (
     <div className={styles.roomLayout}>
