@@ -16,7 +16,7 @@ const getDirectStreamUrl = (url) => {
   const fileId = (match1 && match1[1]) || (match2 && match2[1]);
   
   if (fileId) {
-    return `https://drive.usercontent.com/download?id=${fileId}&export=download&confirm=t`;
+    return `https://drive.usercontent.google.com/download?id=${fileId}&export=download&confirm=t`;
   }
 
   // 2. Dropbox Link Conversion
