@@ -89,16 +89,6 @@ export default function VideoPlayer({ roomId, isHost, userName, channel }) {
     }
   }, [videoUrl]);
 
-  useEffect(() => {
-    if (!initialPlaybackState) return;
-    const { videoName, videoDuration, isPlaying: shouldPlay, currentTime: targetTime, videoUrl: serverVideoUrl } = initialPlaybackState;
-    if (videoName) {
-      setFileName(videoName);
-      setDuration(videoDuration);
-      setVideoUrl(serverVideoUrl || videoName);
-      initialSyncStateRef.current = { isPlaying: shouldPlay, currentTime: targetTime };
-    }
-  }, [initialPlaybackState]);
 
   const handleFileChange = async (e) => {
     const file = e.target.files[0];
