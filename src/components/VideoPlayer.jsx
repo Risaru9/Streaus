@@ -24,6 +24,13 @@ const getDirectStreamUrl = (url) => {
     return cleanUrl.replace('?dl=0', '?raw=1');
   }
 
+  // 3. Pixeldrain Link Conversion
+  const pdRegex = /pixeldrain\.com\/u\/([a-zA-Z0-9_-]+)/;
+  const pdMatch = cleanUrl.match(pdRegex);
+  if (pdMatch) {
+    return `https://pixeldrain.com/api/file/${pdMatch[1]}`;
+  }
+
   return cleanUrl;
 };
 
