@@ -145,28 +145,18 @@ export default function VideoPlayer({ channel, roomId, isHost, initialPlaybackSt
 
     if (url) {
       const convertedUrl = isManual ? url : getDirectStreamUrl(url);
-      
-      try {
-         // Attempt to fetch headers to check if it's a valid video or direct file stream
-         // This might fail due to CORS, but we will catch it
-         const response = await fetch(convertedUrl, { method: 'HEAD', mode: 'no-cors' });
-         // If we reach here, no hard block from CORS for a no-cors request (which is normal for media)
          
-         if (isHost) {
-           setVideoUrl(convertedUrl);
-           setFileName(url);
-           if (channel) {
-             channel.send({ type: 'broadcast', event: 'player:video-loaded', payload: { videoName: url, videoDuration: 0, videoUrl: convertedUrl } });
-           }
-         } else {
-           if (channel) {
-             channel.send({ type: 'broadcast', event: 'player:request-change', payload: { fileName: url, url: convertedUrl, requesterName: sessionStorage.getItem('userName') } });
-           }
-           showToast('Change request sent to Host.');
-         }
-      } catch (err) {
-         console.error('URL Validation Error:', err);
-         showToast('Error loading URL. Make sure it is a direct video link.');
+      if (isHost) {
+        setVideoUrl(convertedUrl);
+        setFileName(url);
+        if (channel) {
+          channel.send({ type: 'broadcast', event: 'player:video-loaded', payload: { videoName: url, videoDuration: 0, videoUrl: convertedUrl } });
+        }
+      } else {
+        if (channel) {
+          channel.send({ type: 'broadcast', event: 'player:request-change', payload: { fileName: url, url: convertedUrl, requesterName: sessionStorage.getItem('userName') } });
+        }
+        showToast('Change request sent to Host.');
       }
       e.target.reset();
     }
@@ -461,7 +451,7 @@ export default function VideoPlayer({ channel, roomId, isHost, initialPlaybackSt
         </div>
       ) : (
         <>
-          <video ref={videoRef} src={videoUrl} className={styles.video} onClick={togglePlay} onTouchStart={handleTouchStart}>
+          <video ref={videoRef} src={videoUrl} referrerPolicy="no-referrer" className={styles.video} onClick={togglePlay} onTouchStart={handleTouchStart}>
             {subtitleUrl && <track kind="subtitles" src={subtitleUrl} srcLang="en" label="Local Subtitle" default />}
           </video>
           <div className={`${styles.controlsOverlay} ${!showControls ? styles.hidden : ''}`}>
