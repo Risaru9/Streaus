@@ -370,8 +370,10 @@ export default function VideoPlayer({ roomId, isHost, userName, channel }) {
 
   useEffect(() => {
     if (!channel) return;
+    let isActive = true;
 
     const onRemotePlay = (payload) => {
+      if (!isActive) return;
       if (videoRef.current) {
         videoRef.current.currentTime = payload.payload.currentTime;
         videoRef.current.play().catch(e => console.error(e));
@@ -379,6 +381,7 @@ export default function VideoPlayer({ roomId, isHost, userName, channel }) {
     };
 
     const onRemotePause = (payload) => {
+      if (!isActive) return;
       if (videoRef.current) {
         videoRef.current.currentTime = payload.payload.currentTime;
         videoRef.current.pause();
@@ -386,12 +389,14 @@ export default function VideoPlayer({ roomId, isHost, userName, channel }) {
     };
 
     const onRemoteSeek = (payload) => {
+      if (!isActive) return;
       if (videoRef.current) {
         videoRef.current.currentTime = payload.payload.currentTime;
       }
     };
 
     const onVideoInfo = (payload) => {
+      if (!isActive) return;
       const p = payload.payload;
       setFileName(p.videoName);
       setDuration(p.videoDuration);
@@ -399,7 +404,7 @@ export default function VideoPlayer({ roomId, isHost, userName, channel }) {
     };
 
     const onRemoteHeartbeat = (payload) => {
-      if (isHostRef.current || !videoRef.current) return;
+      if (!isActive || isHostRef.current || !videoRef.current) return;
       if (Math.abs(videoRef.current.currentTime - payload.payload.currentTime) > 2.5) {
         videoRef.current.currentTime = payload.payload.currentTime;
         showToast('Auto-syncing to host...');
@@ -407,15 +412,18 @@ export default function VideoPlayer({ roomId, isHost, userName, channel }) {
     };
 
     const onRequestChange = (payload) => {
+      if (!isActive) return;
       const p = payload.payload;
       setConfirmRequest(p);
     };
 
     const onChangeRejected = (payload) => {
+      if (!isActive) return;
       showToast(`Host rejected your video change request.`);
     };
 
     const onSyncRequest = () => {
+      if (!isActive) return;
       if (isHostRef.current && videoRef.current && hostStateRef.current.videoUrl) {
          const { videoUrl: currentUrl, fileName: currentName, duration: currentDur, isPlaying: currentPlaying } = hostStateRef.current;
          channel.send({ type: 'broadcast', event: 'player:video-loaded', payload: { videoName: currentName, videoDuration: currentDur, videoUrl: currentUrl } });
@@ -432,19 +440,8 @@ export default function VideoPlayer({ roomId, isHost, userName, channel }) {
       }
     };
 
-    const subs = [
-      channel.on('broadcast', { event: 'player:play' }, onRemotePlay),
-      channel.on('broadcast', { event: 'player:pause' }, onRemotePause),
-      channel.on('broadcast', { event: 'player:seek' }, onRemoteSeek),
-      channel.on('broadcast', { event: 'player:video-loaded' }, onVideoInfo),
-      channel.on('broadcast', { event: 'player:heartbeat' }, onRemoteHeartbeat),
-      channel.on('broadcast', { event: 'player:request-change' }, onRequestChange),
-      channel.on('broadcast', { event: 'player:change-rejected' }, onChangeRejected),
-      channel.on('broadcast', { event: 'player:request-sync' }, onSyncRequest)
-    ];
-
     return () => {
-      subs.forEach(sub => channel.unsubscribe(sub));
+      isActive = false;
     };
   }, [channel]);
 

@@ -20,15 +20,18 @@ export default function ChatPanel({ channel, userName, chatHistory = [] }) {
 
   useEffect(() => {
     if (!channel) return;
-    const emojiHandler = channel.on('broadcast', { event: 'chat:reaction' }, (payload) => {
+    let isActive = true;
+    channel.on('broadcast', { event: 'chat:reaction' }, (payload) => {
+      if (!isActive) return;
       const { emoji } = payload.payload;
       const id = Date.now() + Math.random();
       setFloatingEmojis(prev => [...prev, { id, emoji }]);
       setTimeout(() => {
+        if (!isActive) return;
         setFloatingEmojis(prev => prev.filter(e => e.id !== id));
       }, 2000);
     });
-    return () => { channel.unsubscribe(emojiHandler); };
+    return () => { isActive = false; };
   }, [channel]);
 
   const handleSend = (e) => {
