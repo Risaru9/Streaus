@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { supabase } from '@/lib/supabase';
 import styles from './VideoPlayer.module.css';
 // Helper to automatically convert Google Drive & Dropbox links to direct streamable URLs
 const getDirectStreamUrl = (url) => {
@@ -60,6 +61,21 @@ export default function VideoPlayer({ roomId, isHost, userName, channel }) {
   const [toastMessage, setToastMessage] = useState(null);
   const [confirmRequest, setConfirmRequest] = useState(null);
 
+  const syncToDatabase = useCallback(async (payload) => {
+    if (!isHostRef.current) return;
+    const secret = localStorage.getItem(`streaus_host_secret_${roomId}`);
+    if (!secret) return;
+    try {
+      await fetch('/api/room/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ roomId, hostSecret: secret, ...payload })
+      });
+    } catch (e) {
+      console.error('Failed to sync to DB:', e);
+    }
+  }, [roomId]);
+
 
   const controlsTimeoutRef = useRef(null);
   const initialSyncStateRef = useRef(null);
@@ -89,6 +105,64 @@ export default function VideoPlayer({ roomId, isHost, userName, channel }) {
     }
   }, [videoUrl]);
 
+  // Initial Fetch from Database
+  useEffect(() => {
+    let active = true;
+    const fetchInitial = async () => {
+      const { data, error } = await supabase.from('rooms').select('video_url, video_name, last_position, is_playing, updated_at').eq('id', roomId).single();
+      if (!active) return;
+      if (data && data.video_url) {
+        setVideoUrl(data.video_url);
+        setFileName(data.video_name || '');
+        if (data.is_playing && data.last_position !== null) {
+          const elapsed = (Date.now() - new Date(data.updated_at).getTime()) / 1000;
+          const estTime = parseFloat(data.last_position) + elapsed;
+          setCurrentTime(estTime);
+          if (videoRef.current) videoRef.current.currentTime = estTime;
+        } else if (data.last_position !== null) {
+          setCurrentTime(parseFloat(data.last_position));
+          if (videoRef.current) videoRef.current.currentTime = parseFloat(data.last_position);
+        }
+      }
+    };
+    fetchInitial();
+    return () => { active = false; };
+  }, [roomId]);
+
+  // Claim Room / Generate Secret
+  useEffect(() => {
+    if (isHost) {
+      let secret = localStorage.getItem(`streaus_host_secret_${roomId}`);
+      if (!secret) {
+        secret = crypto.randomUUID();
+        fetch('/api/room/create', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ roomId, hostSecret: secret })
+        })
+        .then(res => res.json())
+        .then(data => {
+          if (data.success) {
+            localStorage.setItem(`streaus_host_secret_${roomId}`, secret);
+          } else if (data.error === 'Room already exists') {
+            console.log('Room is already claimed by someone else.');
+          }
+        })
+        .catch(e => console.error(e));
+      }
+    }
+  }, [isHost, roomId]);
+
+  // Throttled Sync
+  useEffect(() => {
+    let interval;
+    if (isHost && isPlaying) {
+       interval = setInterval(() => {
+          syncToDatabase({ isPlaying: true, lastPosition: videoRef.current?.currentTime || 0 });
+       }, 10000);
+    }
+    return () => clearInterval(interval);
+  }, [isHost, isPlaying, syncToDatabase]);
 
   const handleFileChange = async (e) => {
     const file = e.target.files[0];
@@ -133,6 +207,7 @@ export default function VideoPlayer({ roomId, isHost, userName, channel }) {
             payload: { videoName: file.name, videoDuration: 0, videoUrl: absoluteUrl }
           });
         }
+        syncToDatabase({ videoUrl: absoluteUrl, videoName: file.name, isPlaying: false, lastPosition: 0 });
       } else {
         if (channel) {
           channel.send({
@@ -166,6 +241,7 @@ export default function VideoPlayer({ roomId, isHost, userName, channel }) {
         if (channel) {
           channel.send({ type: 'broadcast', event: 'player:video-loaded', payload: { videoName: url, videoDuration: 0, videoUrl: convertedUrl } });
         }
+        syncToDatabase({ videoUrl: convertedUrl, videoName: url, isPlaying: false, lastPosition: 0 });
       } else {
         if (channel) {
           channel.send({ type: 'broadcast', event: 'player:request-change', payload: { fileName: url, url: convertedUrl, requesterName: sessionStorage.getItem('userName') } });
@@ -206,9 +282,11 @@ export default function VideoPlayer({ roomId, isHost, userName, channel }) {
       if (isPlaying) {
         videoRef.current.pause();
         channel?.send({ type: 'broadcast', event: 'player:pause', payload: { currentTime: videoRef.current.currentTime } });
+        syncToDatabase({ isPlaying: false, lastPosition: videoRef.current.currentTime });
       } else {
         videoRef.current.play().catch(e => console.error(e));
         channel?.send({ type: 'broadcast', event: 'player:play', payload: { currentTime: videoRef.current.currentTime } });
+        syncToDatabase({ isPlaying: true, lastPosition: videoRef.current.currentTime });
       }
     }
   };
@@ -219,6 +297,7 @@ export default function VideoPlayer({ roomId, isHost, userName, channel }) {
       videoRef.current.currentTime = newTime;
       setCurrentTime(newTime);
       channel?.send({ type: 'broadcast', event: 'player:seek', payload: { currentTime: newTime } });
+      syncToDatabase({ lastPosition: newTime });
     }
   };
 

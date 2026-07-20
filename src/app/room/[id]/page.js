@@ -68,14 +68,25 @@ export default function RoomPage({ params }) {
             activeUsers.push(u);
             if (u.joinedAt < oldestTime) {
               oldestTime = u.joinedAt;
-              firstUser = u.id; // USE ID INSTEAD OF USERNAME
+              firstUser = u.id;
             }
           }
         });
         setUsers(activeUsers);
-        if (firstUser) {
+        
+        // If we have a saved secret for this room, we enforce our own host status
+        const savedSecret = localStorage.getItem(`streaus_host_secret_${roomId}`);
+        if (savedSecret) {
+          setHostId(localUserId);
+          // Broadcast our claim so others know
+          roomChannel.send({ type: 'broadcast', event: 'host:claim', payload: { hostId: localUserId } });
+        } else if (firstUser && !stateRef.current.hostId) {
+          // Fallback to oldest user if no host is set yet
           setHostId(firstUser);
         }
+      })
+      .on('broadcast', { event: 'host:claim' }, (payload) => {
+        setHostId(payload.payload.hostId);
       })
       .on('broadcast', { event: 'chat:message' }, (payload) => {
         setChatHistory((prev) => [...prev, payload.payload]);
