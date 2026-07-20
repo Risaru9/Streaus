@@ -14,14 +14,29 @@ import { supabase } from '@/lib/supabase';
 export function mapAuthError(supabaseError) {
   if (!supabaseError) return null;
 
+  // Log error on server for debugging
+  console.error("Supabase Auth Error detailed:", supabaseError);
+
   const msg = supabaseError.message || '';
   const status = supabaseError.status;
+
+  // Check for email confirmation error
+  if (
+    msg.toLowerCase().includes('confirm') ||
+    msg.toLowerCase().includes('not confirmed') ||
+    msg.toLowerCase().includes('verification')
+  ) {
+    return 'Email belum dikonfirmasi. Silakan periksa kotak masuk atau spam email Anda untuk memverifikasi akun.';
+  }
 
   // Generic message for bad credentials
   if (
     msg.toLowerCase().includes('invalid grant') ||
     msg.toLowerCase().includes('invalid credentials') ||
-    msg.toLowerCase().includes('credentials')
+    msg.toLowerCase().includes('credentials') ||
+    msg.toLowerCase().includes('invalid login') ||
+    msg.toLowerCase().includes('not found') ||
+    msg.toLowerCase().includes('incorrect')
   ) {
     return 'Email atau password salah.';
   }
