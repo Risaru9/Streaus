@@ -99,15 +99,32 @@ export default function VideoPlayer({ channel, roomId, isHost, initialPlaybackSt
 
     setIsUploading(true);
     try {
-      const fileExt = file.name.split('.').pop();
-      const uniqueFileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
-      const filePath = `room-${roomId}/${uniqueFileName}`;
+      // 1. Get presigned URL from our API
+      const res = await fetch('/api/upload', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ filename: file.name, contentType: file.type || 'video/mp4' })
+      });
       
-      const { error } = await supabase.storage.from('videos').upload(filePath, file);
-      if (error) throw error;
+      if (!res.ok) {
+        const errorText = await res.text();
+        throw new Error(errorText || 'Failed to get upload URL');
+      }
       
-      const { data: publicUrlData } = supabase.storage.from('videos').getPublicUrl(filePath);
-      const absoluteUrl = publicUrlData.publicUrl;
+      const { presignedUrl, publicUrl } = await res.json();
+
+      // 2. Upload directly to Cloudflare R2 using the presigned URL
+      const uploadRes = await fetch(presignedUrl, {
+        method: 'PUT',
+        headers: { 'Content-Type': file.type || 'video/mp4' },
+        body: file
+      });
+
+      if (!uploadRes.ok) {
+        throw new Error('Failed to upload video to Cloudflare R2');
+      }
+      
+      const absoluteUrl = publicUrl;
 
       if (isHost) {
         setVideoUrl(absoluteUrl);
