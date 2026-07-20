@@ -365,7 +365,7 @@ export default function VideoPlayer({ channel, roomId, isHost, initialPlaybackSt
   useEffect(() => {
     if (!isHost && channel) {
       const timer = setTimeout(() => {
-        channel.send({ type: 'broadcast', event: 'player:request-sync' });
+        channel.send({ type: 'broadcast', event: 'player:request-sync', payload: {} });
       }, 1000);
       return () => clearTimeout(timer);
     }
@@ -483,21 +483,28 @@ export default function VideoPlayer({ channel, roomId, isHost, initialPlaybackSt
         <div className={styles.placeholder}><h2>Uploading video to Cloudflare R2... (Please wait, this depends on your upload speed)</h2></div>
       ) : !videoUrl ? (
         <div className={styles.placeholder}>
-          <div className={styles.setupControls}>
-            <h2>No video loaded</h2>
-            <label className={styles.fileButton}>
-              Upload Local File to Cloud
-              <input type="file" accept="video/*" onChange={handleFileChange} hidden />
-            </label>
-            <form onSubmit={handleUrlSubmit} className={styles.urlForm}>
-              <input type="url" name="url" placeholder="Or enter direct URL..." required />
-              <label style={{display: 'flex', alignItems: 'center', gap: '8px', color: '#fff', fontSize: '14px'}}>
-                <input type="checkbox" name="manual" />
-                Raw / Bypass Converter
+          {isHost ? (
+            <div className={styles.setupControls}>
+              <h2>No video loaded</h2>
+              <label className={styles.fileButton}>
+                Upload Local File to Cloud
+                <input type="file" accept="video/*" onChange={handleFileChange} hidden />
               </label>
-              <button type="submit">Load URL</button>
-            </form>
-          </div>
+              <form onSubmit={handleUrlSubmit} className={styles.urlForm}>
+                <input type="url" name="url" placeholder="Or enter direct URL..." required />
+                <label style={{display: 'flex', alignItems: 'center', gap: '8px', color: '#fff', fontSize: '14px'}}>
+                  <input type="checkbox" name="manual" />
+                  Raw / Bypass Converter
+                </label>
+                <button type="submit">Load URL</button>
+              </form>
+            </div>
+          ) : (
+            <div className={styles.setupControls}>
+              <h2>Waiting for Host...</h2>
+              <p>Please wait while the Host selects a video.</p>
+            </div>
+          )}
         </div>
       ) : (
         <>
