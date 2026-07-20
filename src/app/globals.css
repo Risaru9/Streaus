@@ -1,18 +1,20 @@
 :root {
-  --background: #09090b;
-  --surface: rgba(26, 26, 36, 0.6);
-  --surface-elevated: rgba(36, 36, 58, 0.8);
-  --border: rgba(255, 255, 255, 0.1);
-  --text-primary: #f4f4f5;
-  --text-secondary: #a1a1aa;
-  --accent: #8b5cf6;
-  --accent-hover: #a78bfa;
-  --accent-subtle: rgba(139, 92, 246, 0.15);
+  --background: #0B0E14;
+  --surface: rgba(22, 26, 38, 0.7);
+  --surface-elevated: rgba(32, 38, 54, 0.9);
+  --border: rgba(139, 143, 163, 0.2);
+  --text-primary: #F5F3EE;
+  --text-secondary: #8B8FA3;
+  --accent: #F2B705;
+  --accent-hover: #ffc824;
+  --accent-subtle: rgba(242, 183, 5, 0.15);
+  --danger: #FF4D4D;
+  --danger-hover: #ff6b6b;
   --success: #10b981;
   --warning: #f59e0b;
-  --error: #ef4444;
+  --error: #FF4D4D;
   
-  --glow-accent: 0 0 20px rgba(139, 92, 246, 0.4);
+  --glow-accent: 0 0 20px rgba(242, 183, 5, 0.4);
 }
 
 * {
@@ -22,10 +24,10 @@
 }
 
 body {
-  background: radial-gradient(circle at top, #1e1e2e 0%, var(--background) 100%);
+  background: radial-gradient(circle at top, #151a26 0%, var(--background) 100%);
   background-attachment: fixed;
   color: var(--text-primary);
-  font-family: 'Inter', sans-serif;
+  font-family: var(--font-inter), sans-serif;
   -webkit-font-smoothing: antialiased;
 }
 

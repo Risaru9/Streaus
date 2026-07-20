@@ -1,27 +1,29 @@
 import './globals.css';
-import { Inter } from 'next/font/google';
+import { Inter, Bebas_Neue, JetBrains_Mono } from 'next/font/google';
 
-const inter = Inter({ subsets: ['latin'] });
+const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
+const bebas = Bebas_Neue({ weight: '400', subsets: ['latin'], variable: '--font-bebas' });
+const jetbrains = JetBrains_Mono({ subsets: ['latin'], variable: '--font-jetbrains' });
 
 export const metadata = {
-  title: 'WatchParty',
+  title: 'Streaus - WatchParty',
   description: 'Watch videos together in real-time',
   manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
-    title: 'WatchParty',
+    title: 'Streaus',
   },
 };
 
 export const viewport = {
-  themeColor: '#111827',
+  themeColor: '#0B0E14',
 };
 
 export default function RootLayout({ children }) {
   return (
     <html lang="en">
-      <body className={inter.className}>{children}</body>
+      <body className={`${inter.variable} ${bebas.variable} ${jetbrains.variable} font-sans`}>{children}</body>
     </html>
   );
 }

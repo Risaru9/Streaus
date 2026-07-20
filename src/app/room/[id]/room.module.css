@@ -25,9 +25,13 @@
 }
 
 .logo {
+  font-family: var(--font-bebas), sans-serif;
   color: var(--accent);
-  font-weight: 700;
+  font-weight: 400;
+  font-size: 2rem;
+  letter-spacing: 2px;
   margin: 0;
+  text-transform: uppercase;
 }
 
 .roomCodeContainer {
@@ -40,8 +44,10 @@
 }
 
 .roomCode {
-  font-family: monospace;
-  color: var(--text-secondary);
+  font-family: var(--font-jetbrains), monospace;
+  color: var(--text-primary);
+  font-size: 1.1rem;
+  letter-spacing: 2px;
 }
 
 .headerRight {

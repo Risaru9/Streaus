@@ -11,10 +11,14 @@
 }
 
 .title {
-  font-size: 3rem;
-  font-weight: 700;
-  margin-bottom: 1rem;
-  color: var(--text-primary);
+  font-family: var(--font-bebas), sans-serif;
+  font-size: 4.5rem;
+  font-weight: 400;
+  letter-spacing: 2px;
+  margin-bottom: 0.5rem;
+  color: var(--accent);
+  text-transform: uppercase;
+  text-shadow: 0 0 15px rgba(242, 183, 5, 0.5);
 }
 
 .subtitle {
@@ -33,11 +37,74 @@
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
+  
+  /* Ticket Shape */
+  position: relative;
+  background-color: var(--surface);
+  border-radius: 12px;
+  padding: 2rem 2rem 3.5rem 2rem;
+  
+  /* Notches on left and right */
+  -webkit-mask-image: radial-gradient(circle at 0% 50%, transparent 15px, black 16px),
+                      radial-gradient(circle at 100% 50%, transparent 15px, black 16px);
+  -webkit-mask-size: 51% 100%;
+  -webkit-mask-repeat: no-repeat;
+  -webkit-mask-position: left, right;
+  
+  mask-image: radial-gradient(circle at 0% 50%, transparent 15px, black 16px),
+              radial-gradient(circle at 100% 50%, transparent 15px, black 16px);
+  mask-size: 51% 100%;
+  mask-repeat: no-repeat;
+  mask-position: left, right;
+
+  transition: transform 0.2s ease, filter 0.2s;
+  filter: drop-shadow(0 10px 20px rgba(0,0,0,0.5));
+}
+
+.card::before {
+  content: '';
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  right: 10px;
+  bottom: 10px;
+  border: 2px dashed rgba(242, 183, 5, 0.3); /* Perforation line */
+  border-radius: 8px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.card::after {
+  content: '';
+  position: absolute;
+  bottom: 20px;
+  left: 30px;
+  right: 30px;
+  height: 30px;
+  /* Barcode effect */
+  background: repeating-linear-gradient(
+    90deg,
+    var(--text-secondary),
+    var(--text-secondary) 2px,
+    transparent 2px,
+    transparent 4px,
+    var(--text-secondary) 4px,
+    var(--text-secondary) 5px,
+    transparent 5px,
+    transparent 8px
+  );
+  opacity: 0.3;
+  pointer-events: none;
+}
+
+.card > * {
+  position: relative;
+  z-index: 1;
 }
 
 .card:hover {
   transform: translateY(-4px);
-  box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+  filter: drop-shadow(0 15px 30px rgba(242, 183, 5, 0.2));
 }
 
 @media (max-width: 768px) {
