@@ -76,6 +76,12 @@ export default function VideoPlayer({ channel, roomId, isHost, initialPlaybackSt
   };
 
   useEffect(() => {
+    if (videoUrl) {
+      console.log("[VideoPlayer] Loading video source URL:", videoUrl);
+    }
+  }, [videoUrl]);
+
+  useEffect(() => {
     if (!initialPlaybackState) return;
     const { videoName, videoDuration, isPlaying: shouldPlay, currentTime: targetTime, videoUrl: serverVideoUrl } = initialPlaybackState;
     if (videoName) {
