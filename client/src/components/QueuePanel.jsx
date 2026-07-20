@@ -3,26 +3,50 @@
 import React, { useState } from 'react';
 import styles from './QueuePanel.module.css';
 
-export default function QueuePanel({ socket, roomId, queue = [], isHost }) {
+export default function QueuePanel({ channel, queue = [], isHost, setQueue }) {
   const [urlInput, setUrlInput] = useState('');
+
+  const broadcastQueueUpdate = (newQueue) => {
+    setQueue(newQueue);
+    if (channel) {
+      channel.send({
+        type: 'broadcast',
+        event: 'queue:update',
+        payload: { queue: newQueue }
+      });
+    }
+  };
 
   const handleAddUrl = (e) => {
     e.preventDefault();
-    if (urlInput.trim() && socket) {
-      socket.emit('queue:add', { fileName: urlInput.trim(), url: urlInput.trim() });
+    if (urlInput.trim()) {
+      const newItem = { id: Date.now(), fileName: urlInput.trim(), url: urlInput.trim() };
+      broadcastQueueUpdate([...queue, newItem]);
       setUrlInput('');
     }
   };
 
   const handleRemove = (index) => {
-    if (socket && isHost) {
-      socket.emit('queue:remove', { index });
+    if (isHost) {
+      const newQueue = [...queue];
+      newQueue.splice(index, 1);
+      broadcastQueueUpdate(newQueue);
     }
   };
 
   const handlePlayNext = () => {
-    if (socket && isHost) {
-      socket.emit('queue:next');
+    if (isHost && queue.length > 0) {
+      const nextItem = queue[0];
+      const newQueue = queue.slice(1);
+      broadcastQueueUpdate(newQueue);
+      
+      if (channel) {
+        channel.send({
+          type: 'broadcast',
+          event: 'player:load',
+          payload: { url: nextItem.url, isDirectLink: true }
+        });
+      }
     }
   };
 
@@ -37,14 +61,7 @@ export default function QueuePanel({ socket, roomId, queue = [], isHost }) {
 
       <div className={styles.addForm}>
         <form onSubmit={handleAddUrl} className={styles.form}>
-          <input 
-            type="url" 
-            placeholder="Add video URL to queue..." 
-            value={urlInput}
-            onChange={(e) => setUrlInput(e.target.value)}
-            className={styles.input}
-            required
-          />
+          <input type="url" placeholder="Add video URL to queue..." value={urlInput} onChange={(e) => setUrlInput(e.target.value)} className={styles.input} required />
           <button type="submit" className={styles.addBtn}>Add</button>
         </form>
       </div>
@@ -57,16 +74,9 @@ export default function QueuePanel({ socket, roomId, queue = [], isHost }) {
             <li key={item.id} className={styles.queueItem}>
               <div className={styles.itemInfo}>
                 <span className={styles.itemName}>{item.fileName.substring(item.fileName.lastIndexOf('/') + 1)}</span>
-                <span className={styles.itemAddedBy}>Added by {item.addedBy}</span>
               </div>
               {isHost && (
-                <button 
-                  className={styles.removeBtn} 
-                  onClick={() => handleRemove(index)}
-                  title="Remove from queue"
-                >
-                  ✕
-                </button>
+                <button className={styles.removeBtn} onClick={() => handleRemove(index)} title="Remove from queue">✕</button>
               )}
             </li>
           ))

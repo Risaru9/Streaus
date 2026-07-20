@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { getSocket } from '@/lib/socket';
+import { supabase } from '@/lib/supabase';
 import styles from './page.module.css';
 
 export default function LandingPage() {
@@ -10,19 +10,37 @@ export default function LandingPage() {
   const [createName, setCreateName] = useState('');
   const [joinCode, setJoinCode] = useState('');
   const [joinName, setJoinName] = useState('');
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const checkAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        router.push('/login');
+      } else {
+        setUser(session.user);
+        // Automatically use email name as default display name
+        const defaultName = session.user.email.split('@')[0];
+        setCreateName(defaultName);
+        setJoinName(defaultName);
+        setLoading(false);
+      }
+    };
+    checkAuth();
+  }, [router]);
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    router.push('/login');
+  };
 
   const handleCreate = () => {
     if (!createName) return;
     sessionStorage.setItem('userName', createName);
-    const socket = getSocket();
-    socket.connect();
-    socket.emit('room:create', { userName: createName }, (response) => {
-      if (response && response.room && response.room.id) {
-        router.push(`/room/${response.room.id}`);
-      } else if (response && response.error) {
-        console.error(response.error);
-      }
-    });
+    // Generating a random 6-character room ID
+    const newRoomId = Math.random().toString(36).substring(2, 8).toUpperCase();
+    router.push(`/room/${newRoomId}`);
   };
 
   const handleJoin = () => {
@@ -31,9 +49,15 @@ export default function LandingPage() {
     router.push(`/room/${joinCode}?name=${encodeURIComponent(joinName)}`);
   };
 
+  if (loading) return <div className={styles.container} style={{justifyContent: 'center'}}>Loading...</div>;
+
   return (
     <div className={styles.container}>
       <header className={styles.hero}>
+        <div style={{ position: 'absolute', top: '1rem', right: '1rem', display: 'flex', gap: '1rem', alignItems: 'center' }}>
+          <span style={{color: 'var(--text-secondary)'}}>{user?.email}</span>
+          <button className="btn btn-secondary" style={{padding: '0.25rem 0.75rem'}} onClick={handleLogout}>Logout</button>
+        </div>
         <h1 className={styles.title}>WatchParty</h1>
         <p className={styles.subtitle}>Watch videos together with your friends in real-time.</p>
       </header>

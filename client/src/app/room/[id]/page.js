@@ -2,7 +2,7 @@
 
 import { useEffect, useState, use } from 'react';
 import { useRouter } from 'next/navigation';
-import { getSocket } from '@/lib/socket';
+import { supabase } from '@/lib/supabase';
 import styles from './room.module.css';
 import VideoPlayer from '@/components/VideoPlayer';
 import ChatPanel from '@/components/ChatPanel';
@@ -15,135 +15,114 @@ export default function RoomPage({ params }) {
   
   const [activeTab, setActiveTab] = useState('chat');
   const [userName, setUserName] = useState('');
-  const [isConnected, setIsConnected] = useState(false);
+  const [channel, setChannel] = useState(null);
   const [users, setUsers] = useState([]);
   const [chatHistory, setChatHistory] = useState([]);
-  const [playbackState, setPlaybackState] = useState(null);
-  const [hostId, setHostId] = useState(null);
-  const [socketId, setSocketId] = useState(null);
-  const [socket, setSocket] = useState(null);
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [kickedReason, setKickedReason] = useState(null);
   const [queue, setQueue] = useState([]);
+  const [hostId, setHostId] = useState(null);
+  const [isConnected, setIsConnected] = useState(false);
 
   useEffect(() => {
     let name = sessionStorage.getItem('userName');
     if (!name) {
-      const urlParams = new URLSearchParams(window.location.search);
-      name = urlParams.get('name');
+      name = new URLSearchParams(window.location.search).get('name');
     }
-    
     if (!name) {
       router.push('/');
       return;
     }
-    
     setUserName(name);
 
-    const s = getSocket();
-    setSocket(s);
-    
-    const handleJoin = () => {
-      setIsConnected(true);
-      setSocketId(s.id);
-      s.emit('room:join', { roomId, userName: name }, (response) => {
-        if (response && response.room) {
-          setUsers(response.room.users || []);
-          setChatHistory(response.room.chatHistory || []);
-          setPlaybackState(response.room.playbackState || null);
-          setHostId(response.room.host);
-          setQueue(response.room.queue || []);
+    const roomChannel = supabase.channel(`room:${roomId}`, {
+      config: {
+        presence: { key: name },
+        broadcast: { self: true, ack: false }
+      }
+    });
+
+    roomChannel
+      .on('presence', { event: 'sync' }, () => {
+        const state = roomChannel.presenceState();
+        const activeUsers = [];
+        let firstUser = null;
+        let oldestTime = Infinity;
+
+        Object.keys(state).forEach((key) => {
+          const userArr = state[key];
+          if (userArr.length > 0) {
+            const u = userArr[0];
+            activeUsers.push(u);
+            if (u.joinedAt < oldestTime) {
+              oldestTime = u.joinedAt;
+              firstUser = u.userName;
+            }
+          }
+        });
+        setUsers(activeUsers);
+        if (firstUser) {
+          setHostId(firstUser);
+        }
+      })
+      .on('broadcast', { event: 'chat:message' }, (payload) => {
+        setChatHistory((prev) => [...prev, payload.payload]);
+      })
+      .on('broadcast', { event: 'queue:update' }, (payload) => {
+        setQueue(payload.payload.queue);
+      })
+      .on('broadcast', { event: 'state:sync' }, (payload) => {
+        if (payload.payload.targetUser === name) {
+          setChatHistory(payload.payload.chatHistory || []);
+          setQueue(payload.payload.queue || []);
         }
       });
-    };
 
-    if (s.connected) {
-      handleJoin();
-    } else {
-      s.connect();
-    }
-    
-    s.on('connect', handleJoin);
-
-    s.on('disconnect', () => {
-      setIsConnected(false);
+    roomChannel.subscribe(async (status) => {
+      if (status === 'SUBSCRIBED') {
+        setIsConnected(true);
+        await roomChannel.track({ 
+          userName: name, 
+          id: name, 
+          joinedAt: Date.now() 
+        });
+        roomChannel.send({
+          type: 'broadcast',
+          event: 'state:request',
+          payload: { from: name }
+        });
+      } else {
+        setIsConnected(false);
+      }
     });
 
-    s.on('room:user-joined', (data) => {
-      if (data.users) setUsers(data.users);
-    });
-    
-    s.on('room:user-left', (data) => {
-      if (data.users) setUsers(data.users);
-      if (data.newHost) setHostId(data.newHost);
-    });
-
-    s.on('chat:message', (msg) => {
-      setChatHistory((prev) => [...prev, msg]);
-    });
-
-    s.on('room:deleted', (data) => {
-      setKickedReason(data.reason || 'Room was deleted.');
-      s.disconnect();
-    });
-
-    s.on('queue:updated', (newQueue) => {
-      setQueue(newQueue);
-    });
+    setChannel(roomChannel);
 
     return () => {
-      s.off('connect');
-      s.off('disconnect');
-      s.off('room:user-joined');
-      s.off('room:user-left');
-      s.off('chat:message');
-      s.off('room:deleted');
-      s.off('queue:updated');
+      supabase.removeChannel(roomChannel);
     };
   }, [roomId, router]);
 
-  const copyRoomCode = () => {
-    navigator.clipboard.writeText(roomId);
-  };
-
-  const handleLeaveRoom = () => {
-    if (socket) {
-      socket.emit('room:leave');
-      socket.disconnect();
-    }
-    router.push('/');
-  };
-
-  const handleMakeHost = (targetUserId) => {
-    if (socket) {
-      socket.emit('room:transfer-host', { targetUserId });
-    }
-  };
-
-  const handleDeleteRoom = () => {
-    if (socket) {
-      socket.emit('room:delete', {}, () => {
-        socket.disconnect();
-        router.push('/');
+  useEffect(() => {
+    if (channel && hostId === userName) {
+      const reqHandler = channel.on('broadcast', { event: 'state:request' }, (payload) => {
+        channel.send({
+          type: 'broadcast',
+          event: 'state:sync',
+          payload: {
+            targetUser: payload.payload.from,
+            chatHistory,
+            queue
+          }
+        });
       });
-    } else {
-      router.push('/');
+      return () => { channel.unsubscribe(reqHandler); }
     }
-  };
+  }, [channel, hostId, userName, chatHistory, queue]);
 
-  if (!userName) return null;
+  const copyRoomCode = () => navigator.clipboard.writeText(roomId);
+  const handleLeaveRoom = () => router.push('/');
 
-  if (kickedReason) {
-    return (
-      <div className={styles.modalOverlay} style={{ zIndex: 9999 }}>
-        <div className={styles.modalContent}>
-          <h3 style={{ color: 'var(--error)' }}>Room Closed</h3>
-          <p style={{ margin: '1.5rem 0', color: 'var(--text-secondary)' }}>{kickedReason}</p>
-          <button className="btn btn-primary" onClick={() => router.push('/')}>Return to Home</button>
-        </div>
-      </div>
-    );
-  }
+  if (!userName || !channel) return null;
+  const isHost = hostId === userName;
 
   return (
     <div className={styles.roomLayout}>
@@ -153,90 +132,27 @@ export default function RoomPage({ params }) {
           <button className="btn btn-secondary" onClick={copyRoomCode}>Copy</button>
         </div>
         <div className={styles.headerRight}>
-          <span className={`${styles.status} ${socket ? styles.connected : styles.disconnected}`}>
-            {socket ? 'Connected' : 'Disconnected'}
+          <span className={`${styles.status} ${isConnected ? styles.connected : styles.disconnected}`}>
+            {isConnected ? 'Connected' : 'Disconnected'}
           </span>
-          
-          {hostId === socketId ? (
-            <button className="btn btn-danger" onClick={() => setShowDeleteConfirm(true)}>Delete Room</button>
-          ) : (
-            <button className="btn btn-secondary" onClick={handleLeaveRoom}>Leave Room</button>
-          )}
+          <button className="btn btn-secondary" onClick={handleLeaveRoom}>Leave Room</button>
         </div>
       </header>
 
-      {showDeleteConfirm && (
-        <div className={styles.modalOverlay}>
-          <div className={styles.modalContent}>
-            <h3>Delete Room?</h3>
-            <p style={{ margin: '1rem 0', color: 'var(--text-secondary)' }}>
-              This will immediately close the room and kick all users out. This action cannot be undone.
-            </p>
-            <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
-              <button className="btn btn-secondary" onClick={() => setShowDeleteConfirm(false)}>Cancel</button>
-              <button className="btn btn-danger" onClick={handleDeleteRoom}>Yes, Delete</button>
-            </div>
-          </div>
-        </div>
-      )}
-
       <main className={styles.mainContent}>
         <div className={styles.videoSection}>
-          <VideoPlayer 
-            socket={socket} 
-            roomId={roomId} 
-            isHost={hostId === socketId} 
-            initialPlaybackState={playbackState}
-          />
+          <VideoPlayer channel={channel} roomId={roomId} isHost={isHost} />
         </div>
-
         <aside className={styles.sidebar}>
           <div className={styles.tabs}>
-            <button 
-              className={`${styles.tab} ${activeTab === 'chat' ? styles.activeTab : ''}`}
-              onClick={() => setActiveTab('chat')}
-            >
-              Chat
-            </button>
-            <button 
-              className={`${styles.tab} ${activeTab === 'users' ? styles.activeTab : ''}`}
-              onClick={() => setActiveTab('users')}
-            >
-              Users
-            </button>
-            <button 
-              className={`${styles.tab} ${activeTab === 'queue' ? styles.activeTab : ''}`}
-              onClick={() => setActiveTab('queue')}
-            >
-              Queue
-            </button>
+            <button className={`${styles.tab} ${activeTab === 'chat' ? styles.activeTab : ''}`} onClick={() => setActiveTab('chat')}>Chat</button>
+            <button className={`${styles.tab} ${activeTab === 'users' ? styles.activeTab : ''}`} onClick={() => setActiveTab('users')}>Users</button>
+            <button className={`${styles.tab} ${activeTab === 'queue' ? styles.activeTab : ''}`} onClick={() => setActiveTab('queue')}>Queue</button>
           </div>
-          
           <div className={styles.tabContent}>
-            {activeTab === 'chat' && (
-              <ChatPanel 
-                socket={socket} 
-                roomId={roomId} 
-                userName={userName} 
-                chatHistory={chatHistory} 
-              />
-            )}
-            {activeTab === 'users' && (
-              <UserList 
-                users={users} 
-                hostId={hostId} 
-                currentUserId={socketId} 
-                onMakeHost={handleMakeHost}
-              />
-            )}
-            {activeTab === 'queue' && (
-              <QueuePanel 
-                socket={socket} 
-                roomId={roomId} 
-                queue={queue} 
-                isHost={hostId === socketId} 
-              />
-            )}
+            {activeTab === 'chat' && <ChatPanel channel={channel} userName={userName} chatHistory={chatHistory} />}
+            {activeTab === 'users' && <UserList users={users} hostId={hostId} currentUserId={userName} />}
+            {activeTab === 'queue' && <QueuePanel channel={channel} queue={queue} isHost={isHost} setQueue={setQueue} />}
           </div>
         </aside>
       </main>
