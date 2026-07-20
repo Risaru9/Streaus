@@ -118,7 +118,16 @@ export default function VideoPlayer({ roomId, isHost, userName, channel }) {
           const elapsed = (Date.now() - new Date(data.updated_at).getTime()) / 1000;
           const estTime = parseFloat(data.last_position) + elapsed;
           setCurrentTime(estTime);
-          if (videoRef.current) videoRef.current.currentTime = estTime;
+          if (videoRef.current) {
+            videoRef.current.currentTime = estTime;
+            // Try to auto-play since Host is playing
+            setTimeout(() => {
+              videoRef.current?.play().catch(e => {
+                console.error("Autoplay blocked on initial load:", e);
+                showToast("Host is playing. Click Play to sync!");
+              });
+            }, 500);
+          }
         } else if (data.last_position !== null) {
           setCurrentTime(parseFloat(data.last_position));
           if (videoRef.current) videoRef.current.currentTime = parseFloat(data.last_position);
@@ -455,7 +464,10 @@ export default function VideoPlayer({ roomId, isHost, userName, channel }) {
       if (!isActive) return;
       if (videoRef.current) {
         videoRef.current.currentTime = payload.payload.currentTime;
-        videoRef.current.play().catch(e => console.error(e));
+        videoRef.current.play().catch(e => {
+          console.error("Autoplay blocked:", e);
+          showToast("Host started playing. Click Play to sync!");
+        });
       }
     };
 
