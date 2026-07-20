@@ -356,6 +356,21 @@ export default function VideoPlayer({ channel, roomId, isHost, initialPlaybackSt
     return () => clearInterval(interval);
   }, [isHost, isPlaying, channel]);
 
+  const hostStateRef = useRef({ videoUrl: '', fileName: '', duration: 0, isPlaying: false });
+
+  useEffect(() => {
+    hostStateRef.current = { videoUrl, fileName, duration, isPlaying };
+  }, [videoUrl, fileName, duration, isPlaying]);
+
+  useEffect(() => {
+    if (!isHost && channel) {
+      const timer = setTimeout(() => {
+        channel.send({ type: 'broadcast', event: 'player:request-sync' });
+      }, 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [isHost, channel]);
+
   useEffect(() => {
     if (!channel) return;
 
@@ -403,6 +418,23 @@ export default function VideoPlayer({ channel, roomId, isHost, initialPlaybackSt
       showToast(`Host rejected your video change request.`);
     };
 
+    const onSyncRequest = () => {
+      if (isHost && videoRef.current && hostStateRef.current.videoUrl) {
+         const { videoUrl: currentUrl, fileName: currentName, duration: currentDur, isPlaying: currentPlaying } = hostStateRef.current;
+         channel.send({ type: 'broadcast', event: 'player:video-loaded', payload: { videoName: currentName, videoDuration: currentDur, videoUrl: currentUrl } });
+         
+         setTimeout(() => {
+           if (videoRef.current) {
+               if (currentPlaying) {
+                   channel.send({ type: 'broadcast', event: 'player:play', payload: { currentTime: videoRef.current.currentTime } });
+               } else {
+                   channel.send({ type: 'broadcast', event: 'player:pause', payload: { currentTime: videoRef.current.currentTime } });
+               }
+           }
+         }, 500);
+      }
+    };
+
     const subs = [
       channel.on('broadcast', { event: 'player:play' }, onRemotePlay),
       channel.on('broadcast', { event: 'player:pause' }, onRemotePause),
@@ -410,7 +442,8 @@ export default function VideoPlayer({ channel, roomId, isHost, initialPlaybackSt
       channel.on('broadcast', { event: 'player:video-loaded' }, onVideoInfo),
       channel.on('broadcast', { event: 'player:heartbeat' }, onRemoteHeartbeat),
       channel.on('broadcast', { event: 'player:request-change' }, onRequestChange),
-      channel.on('broadcast', { event: 'player:change-rejected' }, onChangeRejected)
+      channel.on('broadcast', { event: 'player:change-rejected' }, onChangeRejected),
+      channel.on('broadcast', { event: 'player:request-sync' }, onSyncRequest)
     ];
 
     return () => {
