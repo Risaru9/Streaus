@@ -21,11 +21,13 @@ export const viewport = {
 };
 
 import ParticleBackground from '@/components/ParticleBackground';
+import CustomCursor from '@/components/CustomCursor';
 
 export default function RootLayout({ children }) {
   return (
     <html lang="en">
       <body className={`${inter.variable} ${bebas.variable} ${jetbrains.variable} font-sans`}>
+        <CustomCursor />
         <ParticleBackground />
         {children}
       </body>
