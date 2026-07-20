@@ -447,7 +447,7 @@ export default function VideoPlayer({ channel, roomId, isHost, initialPlaybackSt
       )}
 
       {isUploading ? (
-        <div className={styles.placeholder}><h2>Uploading video to Supabase Storage...</h2></div>
+        <div className={styles.placeholder}><h2>Uploading video to Cloudflare R2... (Please wait, this depends on your upload speed)</h2></div>
       ) : !videoUrl ? (
         <div className={styles.placeholder}>
           <div className={styles.setupControls}>
