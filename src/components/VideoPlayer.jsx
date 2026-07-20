@@ -172,6 +172,36 @@ export default function VideoPlayer({ roomId, isHost, userName, channel }) {
     }
     return () => clearInterval(interval);
   }, [isHost, isPlaying, syncToDatabase]);
+  // Delete current video from R2
+  const deleteCurrentVideoFromR2 = useCallback(async (urlToDelete) => {
+    if (!urlToDelete || !urlToDelete.includes('room-uploads')) return;
+    try {
+      await fetch(`/api/upload?fileUrl=${encodeURIComponent(urlToDelete)}`, { method: 'DELETE' });
+    } catch (e) {
+      console.error('Failed to delete video from R2:', e);
+    }
+  }, []);
+
+  // Cleanup on unmount or tab close
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      if (isHostRef.current && hostStateRef.current.videoUrl) {
+        // We use navigator.sendBeacon or fetch with keepalive to ensure it fires before tab closes
+        const urlToDelete = hostStateRef.current.videoUrl;
+        if (urlToDelete.includes('room-uploads')) {
+          fetch(`/api/upload?fileUrl=${encodeURIComponent(urlToDelete)}`, { method: 'DELETE', keepalive: true }).catch(() => {});
+        }
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      // Also cleanup on unmount if it's not a tab close (e.g. Leave Room button)
+      if (isHostRef.current && hostStateRef.current.videoUrl && hostStateRef.current.videoUrl.includes('room-uploads')) {
+         fetch(`/api/upload?fileUrl=${encodeURIComponent(hostStateRef.current.videoUrl)}`, { method: 'DELETE', keepalive: true }).catch(() => {});
+      }
+    };
+  }, []);
 
   const handleFileChange = async (e) => {
     const file = e.target.files[0];
@@ -207,6 +237,9 @@ export default function VideoPlayer({ roomId, isHost, userName, channel }) {
       const absoluteUrl = publicUrl;
 
       if (isHost) {
+        if (videoUrl) {
+           deleteCurrentVideoFromR2(videoUrl);
+        }
         setVideoUrl(absoluteUrl);
         setFileName(file.name);
         if (channel) {
@@ -245,6 +278,9 @@ export default function VideoPlayer({ roomId, isHost, userName, channel }) {
       const convertedUrl = isManual ? url : getDirectStreamUrl(url);
          
       if (isHost) {
+        if (videoUrl) {
+           deleteCurrentVideoFromR2(videoUrl);
+        }
         setVideoUrl(convertedUrl);
         setFileName(url);
         if (channel) {

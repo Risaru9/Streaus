@@ -40,3 +40,40 @@ export async function POST(request) {
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }
+
+import { DeleteObjectCommand } from '@aws-sdk/client-s3';
+
+export async function DELETE(request) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const fileUrl = searchParams.get('fileUrl');
+
+    if (!fileUrl) {
+      return NextResponse.json({ error: 'Missing fileUrl' }, { status: 400 });
+    }
+
+    // Extract the key from the URL.
+    // Example URL: https://streaus-video-proxy.rizalmahardi109.workers.dev/room-uploads/1704...mp4
+    const urlParts = fileUrl.split('/');
+    const keyIndex = urlParts.findIndex(part => part === 'room-uploads');
+    
+    if (keyIndex === -1) {
+      return NextResponse.json({ error: 'Invalid fileUrl, room-uploads key not found' }, { status: 400 });
+    }
+    
+    // Join all parts after and including 'room-uploads' to support subdirectories if any
+    const objectKey = urlParts.slice(keyIndex).join('/');
+
+    const command = new DeleteObjectCommand({
+      Bucket: process.env.R2_BUCKET_NAME,
+      Key: objectKey,
+    });
+
+    await s3Client.send(command);
+
+    return NextResponse.json({ success: true, deletedKey: objectKey });
+  } catch (error) {
+    console.error('Error deleting file from R2:', error);
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+  }
+}
