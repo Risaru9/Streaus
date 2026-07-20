@@ -138,22 +138,35 @@ export default function VideoPlayer({ channel, roomId, isHost, initialPlaybackSt
     }
   };
 
-  const handleUrlSubmit = (e) => {
+  const handleUrlSubmit = async (e) => {
     e.preventDefault();
     const url = e.target.elements.url.value;
+    const isManual = e.target.elements.manual?.checked;
+
     if (url) {
-      const convertedUrl = getDirectStreamUrl(url);
-      if (isHost) {
-        setVideoUrl(convertedUrl);
-        setFileName(url);
-        if (channel) {
-          channel.send({ type: 'broadcast', event: 'player:video-loaded', payload: { videoName: url, videoDuration: 0, videoUrl: convertedUrl } });
-        }
-      } else {
-        if (channel) {
-          channel.send({ type: 'broadcast', event: 'player:request-change', payload: { fileName: url, url: convertedUrl, requesterName: sessionStorage.getItem('userName') } });
-        }
-        showToast('Change request sent to Host.');
+      const convertedUrl = isManual ? url : getDirectStreamUrl(url);
+      
+      try {
+         // Attempt to fetch headers to check if it's a valid video or direct file stream
+         // This might fail due to CORS, but we will catch it
+         const response = await fetch(convertedUrl, { method: 'HEAD', mode: 'no-cors' });
+         // If we reach here, no hard block from CORS for a no-cors request (which is normal for media)
+         
+         if (isHost) {
+           setVideoUrl(convertedUrl);
+           setFileName(url);
+           if (channel) {
+             channel.send({ type: 'broadcast', event: 'player:video-loaded', payload: { videoName: url, videoDuration: 0, videoUrl: convertedUrl } });
+           }
+         } else {
+           if (channel) {
+             channel.send({ type: 'broadcast', event: 'player:request-change', payload: { fileName: url, url: convertedUrl, requesterName: sessionStorage.getItem('userName') } });
+           }
+           showToast('Change request sent to Host.');
+         }
+      } catch (err) {
+         console.error('URL Validation Error:', err);
+         showToast('Error loading URL. Make sure it is a direct video link.');
       }
       e.target.reset();
     }
@@ -438,6 +451,10 @@ export default function VideoPlayer({ channel, roomId, isHost, initialPlaybackSt
             </label>
             <form onSubmit={handleUrlSubmit} className={styles.urlForm}>
               <input type="url" name="url" placeholder="Or enter direct URL..." required />
+              <label style={{display: 'flex', alignItems: 'center', gap: '8px', color: '#fff', fontSize: '14px'}}>
+                <input type="checkbox" name="manual" />
+                Raw / Bypass Converter
+              </label>
               <button type="submit">Load URL</button>
             </form>
           </div>
