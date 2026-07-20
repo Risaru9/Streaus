@@ -35,7 +35,15 @@ const getDirectStreamUrl = (url) => {
   return cleanUrl;
 };
 
-export default function VideoPlayer({ channel, roomId, isHost, initialPlaybackState }) {
+export default function VideoPlayer({ roomId, isHost, userName, channel }) {
+  const containerRef = useRef(null);
+  const videoRef = useRef(null);
+  const isHostRef = useRef(isHost);
+
+  useEffect(() => {
+    isHostRef.current = isHost;
+  }, [isHost]);
+
   const [videoUrl, setVideoUrl] = useState('');
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
@@ -52,8 +60,7 @@ export default function VideoPlayer({ channel, roomId, isHost, initialPlaybackSt
   const [toastMessage, setToastMessage] = useState(null);
   const [confirmRequest, setConfirmRequest] = useState(null);
 
-  const videoRef = useRef(null);
-  const containerRef = useRef(null);
+
   const controlsTimeoutRef = useRef(null);
   const initialSyncStateRef = useRef(null);
 
@@ -402,7 +409,7 @@ export default function VideoPlayer({ channel, roomId, isHost, initialPlaybackSt
     };
 
     const onRemoteHeartbeat = (payload) => {
-      if (isHost || !videoRef.current) return;
+      if (isHostRef.current || !videoRef.current) return;
       if (Math.abs(videoRef.current.currentTime - payload.payload.currentTime) > 2.5) {
         videoRef.current.currentTime = payload.payload.currentTime;
         showToast('Auto-syncing to host...');
@@ -419,7 +426,7 @@ export default function VideoPlayer({ channel, roomId, isHost, initialPlaybackSt
     };
 
     const onSyncRequest = () => {
-      if (isHost && videoRef.current && hostStateRef.current.videoUrl) {
+      if (isHostRef.current && videoRef.current && hostStateRef.current.videoUrl) {
          const { videoUrl: currentUrl, fileName: currentName, duration: currentDur, isPlaying: currentPlaying } = hostStateRef.current;
          channel.send({ type: 'broadcast', event: 'player:video-loaded', payload: { videoName: currentName, videoDuration: currentDur, videoUrl: currentUrl } });
          

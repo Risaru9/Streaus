@@ -166,7 +166,7 @@ export default function RoomPage({ params }) {
           </div>
           <div className={styles.tabContent}>
             {activeTab === 'chat' && <ChatPanel channel={channel} userName={userName} chatHistory={chatHistory} />}
-            {activeTab === 'users' && <UserList users={users} hostId={hostId} currentUserId={userName} />}
+            {activeTab === 'users' && <UserList users={users} hostId={hostId} currentUserId={userId} />}
             {activeTab === 'queue' && <QueuePanel channel={channel} queue={queue} isHost={isHost} setQueue={setQueue} />}
           </div>
         </aside>
