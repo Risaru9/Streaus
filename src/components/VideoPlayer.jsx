@@ -25,7 +25,8 @@ const getDirectStreamUrl = (url) => {
   }
 
   // 3. Pixeldrain Link Conversion
-  const pdRegex = /pixeldrain\.com\/u\/([a-zA-Z0-9_-]+)/;
+  // Match both /u/ID and /api/file/ID, and strip ?download
+  const pdRegex = /pixeldrain\.com\/(?:u|api\/file)\/([a-zA-Z0-9_-]+)/;
   const pdMatch = cleanUrl.match(pdRegex);
   if (pdMatch) {
     return `https://pixeldrain.com/api/file/${pdMatch[1]}`;
