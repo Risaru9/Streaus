@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
+import TiltCard from '@/components/TiltCard';
 import styles from './page.module.css';
 
 export default function LandingPage() {
@@ -68,7 +69,7 @@ export default function LandingPage() {
       </header>
       
       <main className={styles.cardsContainer}>
-        <div className={`card ${styles.card}`}>
+        <TiltCard className={`card ${styles.card}`}>
           <h2>Create Room</h2>
           <div className="input-group">
             <label>Display Name</label>
@@ -80,9 +81,9 @@ export default function LandingPage() {
             />
           </div>
           <button className="btn btn-primary" onClick={handleCreate}>Create Room</button>
-        </div>
+        </TiltCard>
 
-        <div className={`card ${styles.card}`}>
+        <TiltCard className={`card ${styles.card}`}>
           <h2>Join Room</h2>
           <div className="input-group">
             <label>Room Code</label>
@@ -103,7 +104,7 @@ export default function LandingPage() {
             />
           </div>
           <button className="btn btn-secondary" onClick={handleJoin}>Join Room</button>
-        </div>
+        </TiltCard>
       </main>
     </div>
   );
