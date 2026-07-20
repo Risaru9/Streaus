@@ -31,6 +31,11 @@ export default function LandingPage() {
   }, [router]);
 
   const handleLogout = async () => {
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' });
+    } catch (err) {
+      console.error('API logout failed, falling back:', err);
+    }
     await supabase.auth.signOut();
     router.push('/login');
   };
