@@ -602,7 +602,7 @@ export default function VideoPlayer({ roomId, isHost, userName, channel }) {
         </div>
       ) : (
         <>
-          <video ref={videoRef} src={videoUrl} referrerPolicy="no-referrer" className={styles.video} onClick={togglePlay} onTouchStart={handleTouchStart}>
+          <video ref={videoRef} src={videoUrl} referrerPolicy="no-referrer" crossOrigin="anonymous" playsInline preload="auto" className={styles.video} onClick={togglePlay} onTouchStart={handleTouchStart}>
             {subtitleUrl && <track kind="subtitles" src={subtitleUrl} srcLang="en" label="Local Subtitle" default />}
           </video>
           <div className={`${styles.controlsOverlay} ${!showControls ? styles.hidden : ''}`}>
