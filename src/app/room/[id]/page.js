@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, use } from 'react';
+import { useEffect, useState, use, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import styles from './room.module.css';
@@ -21,6 +21,12 @@ export default function RoomPage({ params }) {
   const [queue, setQueue] = useState([]);
   const [hostId, setHostId] = useState(null);
   const [isConnected, setIsConnected] = useState(false);
+
+  // Keep latest state in a ref to avoid resetting the realtime subscription when state updates
+  const stateRef = useRef({ chatHistory, queue, hostId, userName });
+  useEffect(() => {
+    stateRef.current = { chatHistory, queue, hostId, userName };
+  }, [chatHistory, queue, hostId, userName]);
 
   useEffect(() => {
     let name = sessionStorage.getItem('userName');
@@ -69,6 +75,21 @@ export default function RoomPage({ params }) {
       .on('broadcast', { event: 'queue:update' }, (payload) => {
         setQueue(payload.payload.queue);
       })
+      .on('broadcast', { event: 'state:request' }, (payload) => {
+        // Only the host responds to state sync requests to prevent conflicting states
+        const { chatHistory: latestChat, queue: latestQueue, hostId: latestHost, userName: latestUser } = stateRef.current;
+        if (latestHost === latestUser) {
+          roomChannel.send({
+            type: 'broadcast',
+            event: 'state:sync',
+            payload: {
+              targetUser: payload.payload.from,
+              chatHistory: latestChat,
+              queue: latestQueue
+            }
+          });
+        }
+      })
       .on('broadcast', { event: 'state:sync' }, (payload) => {
         if (payload.payload.targetUser === name) {
           setChatHistory(payload.payload.chatHistory || []);
@@ -79,17 +100,21 @@ export default function RoomPage({ params }) {
     roomChannel.subscribe(async (status) => {
       if (status === 'SUBSCRIBED') {
         setIsConnected(true);
+        // Track presence: pass both name (for UserList) and userName (for Host tracking)
         await roomChannel.track({ 
           userName: name, 
+          name: name,
           id: name, 
           joinedAt: Date.now() 
         });
+        
+        // Request current room state from the host
         roomChannel.send({
           type: 'broadcast',
           event: 'state:request',
           payload: { from: name }
         });
-      } else {
+      } else if (status === 'CLOSED' || status === 'CHANNEL_ERROR') {
         setIsConnected(false);
       }
     });
@@ -100,23 +125,6 @@ export default function RoomPage({ params }) {
       supabase.removeChannel(roomChannel);
     };
   }, [roomId, router]);
-
-  useEffect(() => {
-    if (channel && hostId === userName) {
-      const reqHandler = channel.on('broadcast', { event: 'state:request' }, (payload) => {
-        channel.send({
-          type: 'broadcast',
-          event: 'state:sync',
-          payload: {
-            targetUser: payload.payload.from,
-            chatHistory,
-            queue
-          }
-        });
-      });
-      return () => { channel.unsubscribe(reqHandler); }
-    }
-  }, [channel, hostId, userName, chatHistory, queue]);
 
   const copyRoomCode = () => navigator.clipboard.writeText(roomId);
   const handleLeaveRoom = () => router.push('/');
