@@ -376,7 +376,25 @@ export default function VideoPlayer({ roomId, isHost, userName, channel }) {
     }
   };
 
+  const handleVideoClick = () => {
+    if (window.matchMedia("(pointer: coarse)").matches) {
+      setShowControls(prev => {
+        const nextState = !prev;
+        if (nextState) {
+          if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
+          controlsTimeoutRef.current = setTimeout(() => {
+            if (videoRef.current && !videoRef.current.paused) setShowControls(false);
+          }, 3000);
+        }
+        return nextState;
+      });
+    } else {
+      togglePlay();
+    }
+  };
+
   const handleMouseMove = useCallback(() => {
+    if (window.matchMedia("(pointer: coarse)").matches) return;
     setShowControls(true);
     if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
     controlsTimeoutRef.current = setTimeout(() => {
@@ -638,7 +656,7 @@ export default function VideoPlayer({ roomId, isHost, userName, channel }) {
         </div>
       ) : (
         <>
-          <video ref={videoRef} src={videoUrl} referrerPolicy="no-referrer" crossOrigin="anonymous" playsInline preload="auto" className={styles.video} onClick={togglePlay} onTouchStart={handleTouchStart}>
+          <video ref={videoRef} src={videoUrl} referrerPolicy="no-referrer" crossOrigin="anonymous" playsInline preload="auto" className={styles.video} onClick={handleVideoClick} onTouchStart={handleTouchStart}>
             {subtitleUrl && <track kind="subtitles" src={subtitleUrl} srcLang="en" label="Local Subtitle" default />}
           </video>
           <div className={`${styles.controlsOverlay} ${!showControls ? styles.hidden : ''}`}>
