@@ -367,12 +367,27 @@ export default function VideoPlayer({ roomId, isHost, userName, channel }) {
     }
   };
 
-  const toggleFullscreen = () => {
+  const toggleFullscreen = async () => {
     if (!containerRef.current) return;
     if (!document.fullscreenElement) {
-      containerRef.current.requestFullscreen().catch(err => console.error(err));
+      try {
+        await containerRef.current.requestFullscreen();
+        // Coba untuk mengunci orientasi layar ke landscape (berlaku untuk perangkat mobile/HP)
+        if (window.screen && window.screen.orientation && window.screen.orientation.lock) {
+          window.screen.orientation.lock('landscape').catch(err => console.warn('Orientation lock failed:', err));
+        }
+      } catch (err) {
+        console.error(err);
+      }
     } else {
-      document.exitFullscreen();
+      try {
+        await document.exitFullscreen();
+        if (window.screen && window.screen.orientation && window.screen.orientation.unlock) {
+          window.screen.orientation.unlock();
+        }
+      } catch (err) {
+        console.error(err);
+      }
     }
   };
 
