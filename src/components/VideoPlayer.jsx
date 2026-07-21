@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
+import Pocket from '@/components/Pocket';
 import styles from './VideoPlayer.module.css';
 // Helper to automatically convert Google Drive & Dropbox links to direct streamable URLs
 const getDirectStreamUrl = (url) => {
@@ -60,6 +61,14 @@ export default function VideoPlayer({ roomId, isHost, userName, channel }) {
   const [isUploading, setIsUploading] = useState(false);
   const [toastMessage, setToastMessage] = useState(null);
   const [confirmRequest, setConfirmRequest] = useState(null);
+  const [showPocketModal, setShowPocketModal] = useState(false);
+  const [user, setUser] = useState(null);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) setUser(session.user);
+    });
+  }, []);
 
   const syncToDatabase = useCallback(async (payload) => {
     if (!isHostRef.current) return;
@@ -295,6 +304,22 @@ export default function VideoPlayer({ roomId, isHost, userName, channel }) {
       }
       e.target.reset();
     }
+  };
+
+  const handlePocketSelect = (video) => {
+    const { video_name, video_url } = video;
+    if (isHost) {
+      if (videoUrl && videoUrl.includes('room-uploads')) {
+         deleteCurrentVideoFromR2(videoUrl);
+      }
+      setVideoUrl(video_url);
+      setFileName(video_name);
+      if (channel) {
+        channel.send({ type: 'broadcast', event: 'player:video-loaded', payload: { videoName: video_name, videoDuration: 0, videoUrl: video_url } });
+      }
+      syncToDatabase({ videoUrl: video_url, videoName: video_name, isPlaying: false, lastPosition: 0 });
+    }
+    setShowPocketModal(false);
   };
 
   const convertSrtToVtt = (srtContent) => {
@@ -642,6 +667,20 @@ export default function VideoPlayer({ roomId, isHost, userName, channel }) {
         </div>
       )}
 
+      {showPocketModal && (
+        <div className={styles.modalOverlay}>
+          <div style={{ backgroundColor: 'var(--background)', padding: '1rem', borderRadius: '12px', width: '90%', maxWidth: '850px', position: 'relative' }}>
+            <button 
+              onClick={() => setShowPocketModal(false)} 
+              style={{ position: 'absolute', top: '10px', right: '15px', background: 'none', border: 'none', color: '#fff', fontSize: '1.5rem', cursor: 'pointer' }}
+            >
+              &times;
+            </button>
+            <Pocket user={user} onSelectVideo={handlePocketSelect} />
+          </div>
+        </div>
+      )}
+
       {isUploading ? (
         <div className={styles.placeholder}><h2>Uploading video to Cloudflare R2... (Please wait, this depends on your upload speed)</h2></div>
       ) : !videoUrl ? (
@@ -661,6 +700,11 @@ export default function VideoPlayer({ roomId, isHost, userName, channel }) {
                 </label>
                 <button type="submit">Load URL</button>
               </form>
+              {user && (
+                <button className="btn btn-secondary" onClick={() => setShowPocketModal(true)} style={{ marginTop: '1rem', width: '100%' }}>
+                  🎒 Select from Pocket
+                </button>
+              )}
             </div>
           ) : (
             <div className={styles.setupControls}>

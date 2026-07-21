@@ -13,14 +13,15 @@ const s3Client = new S3Client({
 
 export async function POST(request) {
   try {
-    const { filename, contentType } = await request.json();
+    const { filename, contentType, isPocket, userId } = await request.json();
 
     if (!filename || !contentType) {
       return NextResponse.json({ error: 'Missing filename or contentType' }, { status: 400 });
     }
 
     // Generate unique key to prevent overwriting
-    const uniqueKey = `room-uploads/${Date.now()}-${filename.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
+    const folder = isPocket && userId ? `pocket-uploads/${userId}` : 'room-uploads';
+    const uniqueKey = `${folder}/${Date.now()}-${filename.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
 
     const command = new PutObjectCommand({
       Bucket: process.env.R2_BUCKET_NAME,
@@ -53,12 +54,16 @@ export async function DELETE(request) {
     }
 
     // Extract the key from the URL.
-    // Example URL: https://streaus-video-proxy.rizalmahardi109.workers.dev/room-uploads/1704...mp4
+    // Example URL: https://streaus-video-proxy.../room-uploads/... or pocket-uploads/...
     const urlParts = fileUrl.split('/');
-    const keyIndex = urlParts.findIndex(part => part === 'room-uploads');
+    let keyIndex = urlParts.findIndex(part => part === 'room-uploads');
     
     if (keyIndex === -1) {
-      return NextResponse.json({ error: 'Invalid fileUrl, room-uploads key not found' }, { status: 400 });
+      keyIndex = urlParts.findIndex(part => part === 'pocket-uploads');
+    }
+    
+    if (keyIndex === -1) {
+      return NextResponse.json({ error: 'Invalid fileUrl, upload key directory not found' }, { status: 400 });
     }
     
     // Join all parts after and including 'room-uploads' to support subdirectories if any

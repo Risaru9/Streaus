@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import TiltCard from '@/components/TiltCard';
+import Pocket from '@/components/Pocket';
 import styles from './page.module.css';
 
 export default function LandingPage() {
@@ -106,6 +107,10 @@ export default function LandingPage() {
           <button className="btn btn-secondary" onClick={handleJoin}>Join Room</button>
         </TiltCard>
       </main>
+
+      <div style={{ display: 'flex', justifyContent: 'center', width: '100%', padding: '0 2rem' }}>
+        <Pocket user={user} />
+      </div>
     </div>
   );
 }
